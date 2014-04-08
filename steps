@@ -5,6 +5,7 @@
 ################
 tools_dir=/usr/local/tools/
 var_dir=/var/data/
+user=perftest
 
 main_repository=https://github.com/gitnikos/apt_setup/blob/master/
 missing_from_repository_dir="/home/perftest/missing_from_repository"
@@ -12,7 +13,7 @@ missing_from_repository_dir="/home/perftest/missing_from_repository"
 apache_jmeter_ver=apache-jmeter-2.11
 apache_jmeter_src="$main_repository"$apache_jmeter_ver".zip"
 
-gnuplot_source_ver=gnuplot-src-4.6.5
+gnuplot_source_ver=gnuplot-4.6.5
 gnuplot_source_src="$main_repository"$gnuplot_source_ver".tar.gz"
 
 ffmpeg_bin_version=ffmpeg.static.64bit.2014-04-04.tar.gz
@@ -64,12 +65,12 @@ sudo service mysqld start
 sudo mysqladmin -u $mysql_user password $mysql_pwd
 
 # prepare the script to be called to install the DB 
-sudo echo "#!/bin/bash\nmysql -u$mysql_user -p$mysql_pwd -e '\. $tools_dir/database.sql'" > $tools_dir/install_db.sh
+sudo echo -e "#!/bin/bash\nmysql -u$mysql_user -p$mysql_pwd -e '\. $tools_dir/database.sql'" > $tools_dir/install_db.sh
 sudo chmod 700 $tools_dir/install_db.sh
 
 echo "Setting up Tomcat6"
 sudo cp $mysql_connector_binary /usr/share/tomcat6/lib/
-sudo sed -r -i 's/#TOMCAT_USER="tomcat"/TOMCAT_USER="perftest"/g' /etc/sysconfig/tomcat6
+sudo sed -r -i 's/#TOMCAT_USER="tomcat"/TOMCAT_USER="'$user'"/g' /etc/sysconfig/tomcat6
 sudo sed -r -i 's/#TOMCAT_GROUP=/TOMCAT_GROUP=/g' /etc/sysconfig/tomcat6
 
 
@@ -79,7 +80,7 @@ sudo mkdir -p $tools_dir
 cd $tools_dir
 fetch $gnuplot_source_src
 sudo tar xvfz $gnuplot_source_ver".tar.gz"
-cd gnuplot-4.6.4
+cd $gnuplot_source_ver
 sudo yum install gcc.x86_64 gcc-c++.x86_64 cairo-devel.x86_64 cairomm.x86_64 pango.x86_64 pango-devel.x86_64 -y
 sudo ./configure
 sudo make
@@ -90,32 +91,35 @@ echo "Installing Apache JMeter"
 cd $tools_dir
 fetch $apache_jmeter_src
 sudo unzip $apache_jmeter_ver".zip"
-sudo chown -R perftest.perftest $apache_jmeter_ver
+sudo chown -R $user.$user $apache_jmeter_ver
 sudo chmod +x $apache_jmeter_ver/bin/jmeter*
 
 ### Generate required directories
 echo "Setting up required directories"
-sudo mkdir -p $var_dir/log/$server_type && sudo chown -R perftest.perftest $var_dir/log/$server_type
-sudo mkdir -p $var_dir/$server_type && sudo chown -R perftest.perftest $var_dir/$server_type
-sudo mkdir -p $tools_dir/$server_type && sudo chown -R perftest.perftest $tools_dir/$server_type
-sudo chown -R perftest.perftest /var/cache/tomcat6/
-sudo chown -R perftest.perftest /usr/share/tomcat6/webapps/
-sudo chown -R perftest.perftest /var/log/tomcat6/
-
+sudo mkdir -p $var_dir/log/$server_type && sudo chown -R $user.$user $var_dir/log/$server_type
+sudo mkdir -p $var_dir/$server_type && sudo chown -R $user.$user $var_dir/$server_type
+sudo mkdir -p $tools_dir/$server_type && sudo chown -R $user.$user $tools_dir/$server_type
+sudo chown -R $user.$user /var/cache/tomcat6/
+sudo chown -R $user.$user /usr/share/tomcat6/webapps/
+sudo chown -R $user.$user /var/log/tomcat6/
+sudo mkdir -p "$var_dir/$server_type"
+sudo mkdir -p "$var_dir/log/$server_type"
+sudo chown -R $user.$user "$var_dir/$server_type"
+sudo chown -R $user.$user "$var_dir/log/$server_type"
 
 ### Webpagetest
 
 # Install ffmpeg
 echo "Installing Webpagetest - ffmpeg"
 fetch $ffmpeg_bin
-sudo tar xvf $ffmpeg_bin_version
+sudo tar xvfz $ffmpeg_bin_version
 sudo mv ffmpeg*/ffmpeg /usr/bin/
 
 # Install exiftool
 echo "Installing Webpagetest - exiftool"
 fetch $exiftool_bin
 sudo tar xvfz $exiftool_bin_version
-sudo cd Image-ExifTool-*
+cd Image-ExifTool-*
 sudo perl Makefile.PL 
 sudo make
 sudo make install
@@ -150,9 +154,13 @@ sudo /etc/init.d/httpd restart
 
 # Install node.js
 echo "Installing Webpagetest - node.js"
+cd $tools_dir
 fetch $node_js_source_src
 sudo tar xvfz $node_js_source_ver
-sudo mv node*/ $tools_dir
+cd node*/
+sudo ./configure
+sudo make
+sudo make install
 
 # Install webpagetest driver with CentOS compatible google driver
 echo "Installing Webpagetest - driver"
@@ -166,16 +174,29 @@ sudo mv chromedriver/chromedriver "$tools_dir/webpagetest-master/lib/webdriver/c
 
 # Install Xvfb and set the webpagetest agent to use it
 echo "Installing Webpagetest - xvfb"
-sudo yum install xorg-x11-server-Xvfb.x86_64 -y
+sudo yum install xorg-x11-server-Xvfb.x86_64 dbus.x86_64 mesa-dri-drivers.x86_64 dbus-x11.x86_64 -y
+sudo dbus-uuidgen --ensure
 Xvfb :99 -screen 5 1024x768x8 &
 sudo sed -r -i s/declare location=Test/declare location=Test\ndeclare DISPLAY=:99/g /usr/local/tools/webpagetest-master/agent/js/wptdriver.sh
 
 # Install chrome browser
+echo "Installing Chrome"
 fetch $chrome_browser
 sudo yum localinstall $chrome_browser_verchromium -y
 sudo yum install gtk2.x86_64
 sudo ln -s /usr/bin/chromium-browser /usr/bin/chrome
 sudo yum install xterm.x86_64 -y
 
+
 # Install webpagetest
+echo "Installing Webpagetest - agent"
 sudo npm install webpagetest -g
+
+### Firefox
+echo "Installing Firefox"
+sudo yum install firefox_x86_64 -y
+
+## Problem with Webdriver if localhost is not under /etc/hosts 
+sudo sed -r -i 's/127.0.0.1 localhost.localdomain/127.0.0.1 localhost localhost.localdomain/g' /etc/hosts
+
+sudo chowm -R $user.$user $tools_dir
