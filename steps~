@@ -187,6 +187,7 @@ sudo yum install gtk2.x86_64
 sudo ln -s /usr/bin/chromium-browser /usr/bin/chrome
 sudo yum install xterm.x86_64 -y
 
+sudo sed -r -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 
 # Install webpagetest
 echo "Installing Webpagetest - agent"
@@ -198,8 +199,5 @@ sudo yum install firefox.x86_64 -y
 
 ## Problem with Webdriver if localhost is not under /etc/hosts 
 sudo sed -r -i 's/127.0.0.1 localhost.localdomain/127.0.0.1 localhost localhost.localdomain/g' /etc/hosts
-
-## Problem with accessing localhost 
-sudo sed -r -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 
 sudo chown -R $user.$user $tools_dir
