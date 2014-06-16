@@ -7,7 +7,7 @@ tools_dir=/usr/local/tools/
 var_dir=/var/data/
 user=perftest
 
-main_repository=https://github.com/gitnikos/apt_setup/blob/master/
+main_repository=https://github.com/gitnikos/apt_setup/raw/master/
 missing_from_repository_dir="/home/perftest/missing_from_repository"
 
 apache_jmeter_ver=apache-jmeter-2.11
