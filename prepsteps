@@ -1,0 +1,10 @@
+- adduser perftest
+- passwd perftest
+- echo -e  "perftest\tALL=(ALL)\tALL" >> /etc/sudoers
+- sudo su - perftest
+- wget --no-certificate-check https://raw.githubusercontent.com/gitnikos/apt_setup/master/steps
+- chmod +x steps
+- sudo ./steps &> installation_progress &
+
+
+
