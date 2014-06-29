@@ -183,7 +183,7 @@ sudo sed -r -i s/declare location=Test/declare location=Test\ndeclare DISPLAY=:9
 echo "Installing Chrome"
 fetch $chrome_browser
 sudo yum localinstall $chrome_browser_verchromium -y
-sudo yum install gtk2.x86_64
+sudo yum install gtk2.x86_64 -y
 sudo ln -s /usr/bin/chromium-browser /usr/bin/chrome
 sudo yum install xterm.x86_64 -y
 
